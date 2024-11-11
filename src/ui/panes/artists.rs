@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::{
     config::Config,
     context::AppContext,
@@ -74,14 +76,28 @@ impl ArtistsPane {
         client: &mut impl MpdClient,
         artist: &str,
     ) -> Result<impl Iterator<Item = DirOrSong>, MpdError> {
-        Ok(client
-            .list_tag(Tag::Album, Some(&[Filter::new(self.artist_tag(), artist)]))?
+        let mut unique_albums: HashSet<(String, String)> = HashSet::new();
+        let result = client.find(&[Filter::new(self.artist_tag(), artist)]);
+
+        if let Ok(songs) = result {
+            for s in songs {
+                let album_name = s.metadata.get("album").cloned().unwrap_or_default();
+                let mut album_date = s.metadata.get("date").cloned().unwrap_or_default();
+                album_date.truncate(4);
+
+                unique_albums.insert((album_name, album_date));
+            }
+        } else {
+            log::error!("Failed to get songs");
+        }
+
+        Ok(unique_albums
             .into_iter()
-            .map(|v| DirOrSong::Dir {
+            .sorted_by(|a, b| a.1.cmp(&b.1))
+            .map(|(name, _date)| DirOrSong::Dir {
                 full_path: String::new(),
-                name: v,
-            })
-            .sorted())
+                name,
+            }))
     }
 
     fn find_songs(
