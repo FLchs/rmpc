@@ -23,6 +23,7 @@ use ratatui::{
     widgets::{ListItem, StatefulWidget},
     Frame,
 };
+use regex::Regex;
 
 #[derive(Debug)]
 pub enum ArtistsPaneMode {
@@ -36,6 +37,7 @@ pub struct ArtistsPane {
     mode: ArtistsPaneMode,
     browser: Browser<DirOrSong>,
     initialized: bool,
+    config: Config,
 }
 
 impl ArtistsPane {
@@ -46,6 +48,7 @@ impl ArtistsPane {
             filter_input_mode: false,
             browser: Browser::new(context.config),
             initialized: false,
+            config: context.config.clone(),
         }
     }
 
@@ -74,12 +77,17 @@ impl ArtistsPane {
         client: &mut impl MpdClient,
         artist: &str,
     ) -> Result<impl Iterator<Item = DirOrSong>, MpdError> {
+        let line = self.config.theme.album_format_regex;
+        let regex = Regex::new(line).unwrap();
+
         Ok(client
             .list_tag(Tag::Album, Some(&[Filter::new(self.artist_tag(), artist)]))?
             .into_iter()
-            .map(|v| DirOrSong::Dir {
-                full_path: String::new(),
-                name: v,
+            .map(|v| -> DirOrSong {
+                DirOrSong::Dir {
+                    full_path: String::new(),
+                    name: regex.replace_all(&v.to_string(), "").to_string(),
+                }
             })
             .sorted())
     }

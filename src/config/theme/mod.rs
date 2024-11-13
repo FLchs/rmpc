@@ -21,7 +21,7 @@ mod style;
 pub use self::queue_table::{PercentOrLength, SongTableColumn};
 pub use style::{ConfigColor, StyleFile};
 
-use super::defaults;
+use super::{defaults, Leak};
 
 const DEFAULT_ART: &[u8; 58599] = include_bytes!("../../../assets/default.jpg");
 
@@ -46,6 +46,7 @@ pub struct UiConfig {
     pub song_table_format: &'static [SongTableColumn],
     pub header: HeaderConfig,
     pub default_album_art: &'static [u8],
+    pub album_format_regex: &'static str,
 }
 
 impl std::fmt::Debug for UiConfig {
@@ -78,6 +79,7 @@ pub struct UiConfigFile {
     pub(super) song_table_format: QueueTableColumnsFile,
     pub(super) header: HeaderConfigFile,
     pub(super) default_album_art_path: Option<String>,
+    pub(super) album_format_regex: Option<String>,
 }
 
 impl Default for UiConfigFile {
@@ -134,6 +136,7 @@ impl Default for UiConfigFile {
             },
             song_table_format: QueueTableColumnsFile::default(),
             browser_song_format: SongFormatFile::default(),
+            album_format_regex: None,
         }
     }
 }
@@ -188,6 +191,7 @@ impl TryFrom<UiConfigFile> for UiConfig {
         Ok(Self {
             background_color: bg_color,
             draw_borders: value.draw_borders,
+            // album regex ?
             modal_background_color: StringColor(value.modal_background_color).to_color()?.or(bg_color),
             text_color: StringColor(value.text_color).to_color()?,
             header_background_color: header_bg_color,
@@ -224,6 +228,9 @@ impl TryFrom<UiConfigFile> for UiConfig {
                     Ok(std::fs::read(path)?.leak())
                 })?,
             browser_song_format: TryInto::<SongFormat>::try_into(value.browser_song_format)?,
+            album_format_regex: value
+                .album_format_regex
+                .map_or(Ok("" as &'static str), |regex| -> Result<_> { Ok(regex.leak()) })?,
         })
     }
 }
