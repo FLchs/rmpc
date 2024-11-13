@@ -21,7 +21,7 @@ mod style;
 pub use self::queue_table::{PercentOrLength, SongTableColumn};
 pub use style::{ConfigColor, StyleFile};
 
-use super::{defaults, Leak};
+use super::defaults;
 
 const DEFAULT_ART: &[u8; 58599] = include_bytes!("../../../assets/default.jpg");
 
@@ -191,7 +191,6 @@ impl TryFrom<UiConfigFile> for UiConfig {
         Ok(Self {
             background_color: bg_color,
             draw_borders: value.draw_borders,
-            // album regex ?
             modal_background_color: StringColor(value.modal_background_color).to_color()?.or(bg_color),
             text_color: StringColor(value.text_color).to_color()?,
             header_background_color: header_bg_color,
